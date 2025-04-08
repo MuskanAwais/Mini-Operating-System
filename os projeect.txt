@@ -1,0 +1,216 @@
+#include <stdio.h>
+#include <unistd.h>
+
+// Function to display the boot screen with OS name
+void bootScreen() {
+    printf("Welcome to MyOS - Your Personal Operating System\n");
+    sleep(2); // Simulate loading
+    printf("Loading...\n");
+    sleep(2); // Simulate loading
+    printf("Boot Successful!\n");
+}
+
+int main() {
+    // Boot Screen
+    bootScreen();
+
+    // Prompt user to provide hardware resources
+    int ramSize, hardDriveSize, numCores;
+    printf("Please provide hardware resources for the OS:\n");
+    printf("RAM size (in GB): ");
+    scanf("%d", &ramSize);
+    printf("Hard drive size (in GB): ");
+    scanf("%d", &hardDriveSize);
+    printf("Number of CPU cores: ");
+    scanf("%d", &numCores);
+
+    // Display provided hardware resources
+    printf("\nHardware Resources provided:\n");
+    printf("RAM size: %d GB\n", ramSize);
+    printf("Hard drive size: %d GB\n", hardDriveSize);
+    printf("Number of CPU cores: %d\n", numCores);
+
+    // Rest of the code will be implemented in subsequent steps
+    return 0;
+}
+   
+
+*********************************
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <pthread.h>
+
+// Define structure for tasks
+typedef struct {
+    char* name;
+    int memoryRequired;
+    int priority;
+    // Add other attributes as needed
+} Task;
+
+// Function to execute a task
+void* executeTask(void* arg) {
+    Task* task = (Task*)arg;
+    printf("Executing task: %s\n", task->name);
+    sleep(3); // Simulate task execution
+    printf("Task %s completed!\n", task->name);
+    free(task);
+    pthread_exit(NULL);
+}
+
+int main() {
+    // Initialize OS
+    // Implement task management, multitasking, user interaction, etc.
+    // Example of creating and executing a task
+    Task* newTask = (Task*)malloc(sizeof(Task));
+    newTask->name = "Notepad";
+    newTask->memoryRequired = 100;
+    newTask->priority = 1;
+
+    pthread_t tid;
+    pthread_create(&tid, NULL, executeTask, (void*)newTask);
+
+    // Continue implementing the rest of the functionalities
+
+    return 0;
+}
+
+
+
+*****************
+                 calender 
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+// Function to display calendar for a given month and year
+void displayCalendar(int month, int year) {
+    struct tm timeinfo = { .tm_year = year - 1900, .tm_mon = month - 1, .tm_mday = 1 };
+    mktime(&timeinfo);
+
+    printf("   --------------\n");
+    printf("   %s %d\n", monthName[timeinfo.tm_mon], year);
+    printf("   --------------\n");
+    printf(" Sun Mon Tue Wed Thu Fri Sat\n");
+
+    // Calculate the weekday of the first day of the month
+    int weekday = timeinfo.tm_wday;
+
+    // Print leading spaces
+    for (int i = 0; i < weekday; i++) {
+        printf("    ");
+    }
+
+    // Print days of the month
+    while (timeinfo.tm_mon == month - 1) {
+        printf("%4d", timeinfo.tm_mday);
+        if (++weekday > 6) {
+            weekday = 0;
+            printf("\n");
+        } else {
+            printf(" ");
+        }
+        timeinfo.tm_mday++;
+        mktime(&timeinfo);
+    }
+}
+
+int main() {
+    // Get current date
+    time_t currentTime = time(NULL);
+    struct tm *localTime = localtime(&currentTime);
+    int currentMonth = localTime->tm_mon + 1; // Months are zero-based, so add 1
+    int currentYear = localTime->tm_year + 1900; // Years are years since 1900
+
+    // Display current month's calendar
+    displayCalendar(currentMonth, currentYear);
+
+    return 0;
+}
+
+
+
+*************
+          Media player 
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <alsa/asoundlib.h>
+
+#define PCM_DEVICE "default"
+
+// Function to play audio file
+void playAudio(const char *filename) {
+    int err;
+    snd_pcm_t *pcm_handle;
+    snd_pcm_hw_params_t *params;
+    unsigned int pcm;
+    unsigned int tmp;
+    int dir;
+    snd_pcm_uframes_t frames;
+
+    // Open PCM device
+    if ((err = snd_pcm_open(&pcm_handle, PCM_DEVICE, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+        printf("Error opening PCM device: %s\n", snd_strerror(err));
+        return;
+    }
+
+    // Allocate parameters object and fill it with default values
+    snd_pcm_hw_params_alloca(&params);
+    snd_pcm_hw_params_any(pcm_handle, params);
+
+    // Set parameters: Interleaved mode, 16-bit little-endian, stereo
+    snd_pcm_hw_params_set_access(pcm_handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
+    snd_pcm_hw_params_set_format(pcm_handle, params, SND_PCM_FORMAT_S16_LE);
+    snd_pcm_hw_params_set_channels(pcm_handle, params, 2);
+
+    // Set sample rate to 44100 Hz
+    unsigned int sampleRate = 44100;
+    snd_pcm_hw_params_set_rate_near(pcm_handle, params, &sampleRate, &dir);
+
+    // Write parameters to the PCM device
+    if ((err = snd_pcm_hw_params(pcm_handle, params)) < 0) {
+        printf("Error setting PCM parameters: %s\n", snd_strerror(err));
+        return;
+    }
+
+    // Prepare PCM device
+    if ((err = snd_pcm_prepare(pcm_handle)) < 0) {
+        printf("Error preparing PCM device: %s\n", snd_strerror(err));
+        return;
+    }
+
+    // Open audio file
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        printf("Error opening audio file: %s\n", filename);
+        return;
+    }
+
+    // Read and play audio data
+    char buffer[4096];
+    while (!feof(file)) {
+        if (fread(buffer, sizeof(char), sizeof(buffer), file) > 0) {
+            if ((err = snd_pcm_writei(pcm_handle, buffer, sizeof(buffer) / sizeof(buffer[0]))) < 0) {
+                printf("Error writing PCM data: %s\n", snd_strerror(err));
+                break;
+            }
+        }
+    }
+
+    // Close audio file
+    fclose(file);
+
+    // Close PCM device
+    snd_pcm_close(pcm_handle);
+}
+
+int main() {
+    const char *filename = "sample.wav"; // Replace with the path to your audio file
+    playAudio(filename);
+    return 0;
+}
+
